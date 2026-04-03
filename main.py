@@ -1,41 +1,19 @@
+from http.server import BaseHTTPRequestHandler
+import json
 import requests
-import pandas as pd
-from datetime import datetime
 
-def fetch_ohlc(symbol="PI_XBTUSD", interval=1):
-    url = "https://futures.kraken.com/derivatives/api/v3/history"
+class handler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        url = "https://futures.kraken.com/derivatives/api/v3/history/executions"
+        params = {
+            "symbol": "PI_XBTUSD"
+        }
 
-    params = {
-        "symbol": symbol,
-        "interval": interval
-    }
+        response = requests.get(url, params=params)
+        data = response.json()
 
-    response = requests.get(url, params=params)
-    data = response.json()
+        self.send_response(200)
+        self.send_header('Content-type', 'application/json')
+        self.end_headers()
 
-    candles = data.get("candles", [])
-
-    rows = []
-    for c in candles:
-        timestamp = datetime.utcfromtimestamp(c["time"] / 1000)
-        open_price = float(c["open"])
-        high = float(c["high"])
-        low = float(c["low"])
-        close = float(c["close"])
-        volume = float(c["volume"])
-
-        rows.append([timestamp, open_price, high, low, close, volume])
-
-    df = pd.DataFrame(rows, columns=["timestamp", "open", "high", "low", "close", "volume"])
-    return df
-
-
-def main():
-    df = fetch_ohlc()
-
-    print("Data Loaded:")
-    print(df.tail())
-
-
-if __name__ == "__main__":
-    main()
+        self.wfile.write(json.dumps(data).encode())
